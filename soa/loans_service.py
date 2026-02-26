@@ -10,7 +10,6 @@ app = Flask(__name__)
 # Configuration for shared data persistence
 DATA_DIR = '/data/library'
 LOANS_FILE = os.path.join(DATA_DIR, 'loans.json')
-BOOKS_SERVICE_URL = 'http://books:5001'
 
 # Initialize loans list
 loans = []
@@ -53,33 +52,13 @@ def get_loan(loan_id):
 def create_loan():
     if not request.is_json:
         return jsonify({"error": "Content-Type must be application/json"}), 400
-    
-    load_loans()  # Reload to get latest data
+
+    load_loans()
     data = request.get_json()
-    
+
     if not all(key in data for key in ['book_id', 'user_id']):
         return jsonify({"error": "Book ID and User ID are required"}), 400
-    
-    # Check book availability through Books Service
-    try:
-        book_response = requests.get(f"{BOOKS_SERVICE_URL}/books/{data['book_id']}")
-        if book_response.status_code == 404:
-            return jsonify({"error": "Book not found"}), 404
-        
-        book = book_response.json()
-        if book['status'] != "available":
-            return jsonify({"error": "Book is not available"}), 400
-        
-        # Update book status to borrowed
-        update_response = requests.put(
-            f"{BOOKS_SERVICE_URL}/books/{data['book_id']}/status",
-            json={"status": "borrowed"}
-        )
-        if update_response.status_code != 200:
-            return jsonify({"error": "Failed to update book status"}), 500
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Book service communication error: {str(e)}"}), 503
-    
+
     new_loan = {
         "id": max(l['id'] for l in loans) + 1 if loans else 1,
         "book_id": data['book_id'],
@@ -88,36 +67,27 @@ def create_loan():
         "return_date": None,
         "status": "active"
     }
-    
+
     loans.append(new_loan)
     save_loans()
     return jsonify(new_loan), 201
 
 @app.route('/loans/<int:loan_id>/return', methods=['PUT'])
 def return_book(loan_id):
-    load_loans()  # Reload to get latest data
+    load_loans()
     loan = next((l for l in loans if l['id'] == loan_id), None)
+
     if not loan:
         return jsonify({"error": "Loan not found"}), 404
-    
+
     if loan['status'] != "active":
         return jsonify({"error": "Loan is not active"}), 400
-    
-    # Update book status through Books Service
-    try:
-        update_response = requests.put(
-            f"{BOOKS_SERVICE_URL}/books/{loan['book_id']}/status",
-            json={"status": "available"}
-        )
-        if update_response.status_code != 200:
-            return jsonify({"error": "Failed to update book status"}), 500
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Book service communication error: {str(e)}"}), 503
-    
+
     loan['status'] = "returned"
     loan['return_date'] = datetime.now().isoformat()
+
     save_loans()
-    return jsonify(loan)
+    return jsonify(loan), 200
 
 if __name__ == '__main__':
     # Ensure data directory exists
@@ -125,4 +95,4 @@ if __name__ == '__main__':
     # Initialize data if needed
     if not os.path.exists(LOANS_FILE):
         save_loans()
-    app.run(host='0.0.0.0', port=5002)
+    app.run(host='0.0.0.0', port=5000)
