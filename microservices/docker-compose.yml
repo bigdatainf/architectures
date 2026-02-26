@@ -1,0 +1,53 @@
+
+services:
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: api
+    ports:
+      - "8085:5000"
+    depends_on:
+      - books
+      - users
+      - loans
+    networks:
+      - library-net
+
+  books:
+    build:
+      context: .
+      dockerfile: Dockerfile.books
+    container_name: books
+    volumes:
+      - ./books-data:/data
+    networks:
+      - library-net
+
+  users:
+    build:
+      context: .
+      dockerfile: Dockerfile.users
+    container_name: users
+    volumes:
+      - ./users-data:/data
+    networks:
+      - library-net
+
+  loans:
+    build:
+      context: .
+      dockerfile: Dockerfile.loans
+    container_name: loans
+    volumes:
+      - ./loans-data:/data
+    depends_on:
+      - books
+      - users
+    networks:
+      - library-net
+
+networks:
+  library-net:
+    driver: bridge
