@@ -37,6 +37,7 @@ def borrowed_books():
     return jsonify(response.json())
 
 
+
 # -------------------------
 # USERS
 # -------------------------
@@ -52,9 +53,9 @@ def registered_users():
 # LOANS
 # -------------------------
 
-@app.route('/active_loans', methods=['GET'])
+@app.route('/all_loans', methods=['GET'])
 def active_loans():
-    message = build_message("LoansService", "active_loans", {})
+    message = build_message("LoansService", "all_loans", {})
     response = requests.post(ESB_URL, json=message)
     return jsonify(response.json())
 

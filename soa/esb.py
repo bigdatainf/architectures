@@ -16,21 +16,23 @@ SERVICE_MAP = {
 # Mapa de endpoints internos
 ROUTING_TABLE = {
     # Books
-    "available_books": {"path": "books", "method": "GET"},
-    "borrowed_books": {"path": "books", "method": "GET"},
+    "available_books": {"path": "books?status=available", "method": "GET"},
+    "borrowed_books": {"path": "books?status=borrowed", "method": "GET"},
 
     # Users
     "registered_users": {"path": "users", "method": "GET"},
 
     # Loans
-    "active_loans": {"path": "loans", "method": "GET"},
+    "all_loans": {"path": "loans", "method": "GET"},
     "borrow_book": {"path": "loans", "method": "POST"},
     "return_book": {"path": "loans", "method": "PUT"}
 }
 
 @app.route('/message', methods=['POST'])
 def handle_message():
+    
     message = request.json
+    print(f"[ESB] Handle message {message}")
 
     header = message.get("header", {})
     body = message.get("body", {})

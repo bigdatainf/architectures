@@ -11,7 +11,12 @@ books = [
 
 @app.route('/books', methods=['GET'])
 def get_books():
-    return jsonify(books)
+    status = request.args.get("status")
+    if status is None:
+        return jsonify(books)
+    filtered = [book for book in books if str(book["status"]).lower() == status.lower()]
+    return jsonify(filtered)
+
 
 @app.route('/books/<int:book_id>', methods=['GET'])
 def get_book(book_id):

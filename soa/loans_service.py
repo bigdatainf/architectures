@@ -59,6 +59,16 @@ def create_loan():
     if not all(key in data for key in ['book_id', 'user_id']):
         return jsonify({"error": "Book ID and User ID are required"}), 400
 
+    # Check if book exists and is available
+    book_response = requests.get(f"http://books:5000/books/{data['book_id']}")
+    if book_response.status_code != 200:
+        return jsonify({"error": "Book not found"}), 404
+
+    book = book_response.json()
+    if book["status"] != "available":
+        return jsonify({"error": "Book is not available"}), 400
+
+    # Create loan
     new_loan = {
         "id": max(l['id'] for l in loans) + 1 if loans else 1,
         "book_id": data['book_id'],
@@ -70,6 +80,13 @@ def create_loan():
 
     loans.append(new_loan)
     save_loans()
+
+    # Update book status to borrowed
+    requests.put(
+        f"http://books:5000/books/{data['book_id']}/status",
+        json={"status": "borrowed"}
+    )
+
     return jsonify(new_loan), 201
 
 @app.route('/loans/<int:loan_id>/return', methods=['PUT'])
@@ -83,11 +100,19 @@ def return_book(loan_id):
     if loan['status'] != "active":
         return jsonify({"error": "Loan is not active"}), 400
 
+    # 1️⃣ Update loan
     loan['status'] = "returned"
     loan['return_date'] = datetime.now().isoformat()
-
     save_loans()
+
+    # 2️⃣ Update book status back to available
+    requests.put(
+        f"http://books:5000/books/{loan['book_id']}/status",
+        json={"status": "available"}
+    )
+
     return jsonify(loan), 200
+
 
 if __name__ == '__main__':
     # Ensure data directory exists
